@@ -1254,7 +1254,18 @@ netProfit: cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0) - cart.re
             saveCart();
             renderCartItems(); 
 
-            const ta = document.createElement("textarea"); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+            // محاولة النسخ مع تأمين الكود عشان ميوقفش المتصفح على الموبايل
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(msg).catch(e => {
+                        const ta = document.createElement("textarea"); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                    });
+                } else {
+                    const ta = document.createElement("textarea"); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                }
+            } catch (err) { 
+                console.log("تم تجاهل خطأ النسخ التلقائي لاستكمال التحويل"); 
+            }
             
             if (method === 'whatsapp') { 
                 showToast("✅ تم تسجيل الطلب!<br>جاري تحويلك للواتساب...");
