@@ -1103,80 +1103,52 @@ setTimeout(() => {
             const emailInput = document.getElementById('cEmail');
             
             let hasError = false; 
-            
             let phoneVal = p.value.trim();
             let phoneRegex = /^01\d{9}$/; 
 
             if(!n.value.trim()) { n.classList.add('input-error'); hasError = true; } 
-            
             if(!phoneVal || !phoneRegex.test(phoneVal)) { 
                 p.classList.add('input-error'); 
                 hasError = true; 
                 showToast("⚠️ رقم الهاتف غير صحيح! (يجب أن يكون 11 رقم ويبدأ بـ 01)");
             } 
-            
             if(!g.value) { g.classList.add('input-error'); hasError = true; } 
             if(!a.value.trim()) { a.classList.add('input-error'); hasError = true; }
             
-          if(hasError) { 
+            if(hasError) { 
                 document.querySelector('.input-error').scrollIntoView({ behavior: 'smooth', block: 'center' }); 
                 return; 
             }
-            
-            // ------------- بداية كود فيسبوك بيكسل (المطابقة المتقدمة والشراء) -------------                                 
-     // توليد الـ ID الموحد للأوردر (عشان نمنع التكرار مع السيرفر)
-const orderEventId = 'order_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
-try {
-    let finalTotalValue = parseFloat(document.getElementById('finalTotal').innerText.replace(/[^\d.]/g, '')) || 0;
-    
-    // إرسال بيانات العميل لفيسبوك
-    fbq('init', '1248048693816729', { 
-        em: emailInput.value.trim().toLowerCase(), 
-        ph: '2' + phoneVal, 
-        fn: n.value.trim().split(' ')[0], 
-        ct: g.value.trim(), 
-        country: 'EG' 
-    });
-    
-   // إرسال حدث الشراء للبيكسل العادي مع الـ ID الموحد
-let purchasedIds = cart.map(item => String(item.productId || item.id).replace('prod_', ''));
-fbq('track', 'Purchase', { 
-    value: finalTotalValue, 
-    currency: 'EGP', 
-    content_name: 'Website Order',
-    content_type: 'product',
-    content_ids: purchasedIds
-}, { eventID: orderEventId });
+            const orderEventId = 'order_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
 
-} catch(err) { console.log('FB Pixel Error:', err); }              
-                  
-                    // ------------- نهاية كود فيسبوك بيكسل -------------  
+            // 🟢 كود البيكسل بتاعك أهو موجود ومتمسحش 🟢
+            try {
+                let finalTotalValue = parseFloat(document.getElementById('finalTotal').innerText.replace(/[^\d.]/g, '')) || 0;
+                fbq('init', '1248048693816729', { 
+                    em: emailInput.value.trim().toLowerCase(), 
+                    ph: '2' + phoneVal, 
+                    fn: n.value.trim().split(' ')[0], 
+                    ct: g.value.trim(), 
+                    country: 'EG' 
+                });
+                let purchasedIds = cart.map(item => String(item.productId || item.id).replace('prod_', ''));
+                fbq('track', 'Purchase', { 
+                    value: finalTotalValue, 
+                    currency: 'EGP', 
+                    content_name: 'Website Order',
+                    content_type: 'product',
+                    content_ids: purchasedIds
+                }, { eventID: orderEventId });
+            } catch(err) { console.log('FB Pixel Error:', err); }                 
 
-            let targetBtn = null;            if (method === 'whatsapp') targetBtn = document.getElementById('btnWhatsapp');
-            else if (method === 'messenger') targetBtn = document.getElementById('btnMessenger');
-            else if (method === 'instagram') targetBtn = document.getElementById('btnSpecialLink');
-
-            let originalBtnText = "";
-            if (targetBtn) {
-                originalBtnText = targetBtn.innerHTML;
-                targetBtn.innerHTML = "⏳ جاري التسجيل الطلب...";
-                targetBtn.style.pointerEvents = "none"; 
-                targetBtn.style.opacity = "0.7";
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 400));
-
+            // 1. تجهيز رسالة الطلب فوراً
             let msg = `👋 *طلب جديد:*\n👤 الاسم: ${n.value}\n📞 ت: ${phoneVal}\n📍 العنوان: ${g.options[g.selectedIndex].text} - ${a.value}\n\n🛒 *الطلب:*\n`;
             let orderDetailsForSheet = "";
             
             cart.forEach((item, i) => { 
                 let unit = (item.category && item.category.includes('جاهز')) ? 'قطعة' : 'متر'; 
-                
-                // السطر ده كان ممسوح عندك ورجعتهولك عشان الموقع ميقفش
                 let itemStr = `${i+1}. ${item.name} | اللون: ${item.color}\n`;
-                
-                let productLink = window.location.protocol + "//" + window.location.host + window.location.pathname + "?product=" + item.productId;
                 let sheetStr = `${item.qty} ${unit} ${item.name} (${item.color}) - رابط الصورة: ${item.img}`;
                 
                 if (item.originalPrice && item.originalPrice > item.totalPrice) {
@@ -1187,7 +1159,6 @@ fbq('track', 'Purchase', {
                     itemStr += `📏 المقاس: ${item.qty} ${unit}\n💰 السعر: ${item.totalPrice}ج\n`;
                     sheetStr += ` [بـ ${item.totalPrice}ج]`;
                 }
-                
                 itemStr += `🖼️ ${item.img}\n\n`; 
                 msg += itemStr;
                 orderDetailsForSheet += sheetStr + " | ";
@@ -1195,42 +1166,58 @@ fbq('track', 'Purchase', {
             if (appliedDiscountValue > 0) {
                 msg += `🏷️ كود الخصم: ${appliedPromoCode}\n➖ قيمة الخصم: ${appliedDiscountValue.toFixed(0)} جنيه\n\n`;
             }
-
             let finalTotalText = document.getElementById('finalTotal').innerText;
             msg += `💰 الإجمالي المطلوب: ${finalTotalText}`;
-            
+
+            // 2. النسخ الفوري (قبل ما الموبايل يقفل الصلاحية)
+            try {
+                const ta = document.createElement("textarea"); 
+                ta.value = msg; 
+                ta.style.position = 'fixed'; 
+                ta.style.opacity = '0';
+                document.body.appendChild(ta); 
+                ta.select(); 
+                document.execCommand('copy'); 
+                document.body.removeChild(ta);
+            } catch (err) { console.log("تجاهل خطأ النسخ"); }
+
+            let targetBtn = null;            
+            if (method === 'whatsapp') targetBtn = document.getElementById('btnWhatsapp');
+            else if (method === 'messenger') targetBtn = document.getElementById('btnMessenger');
+            else if (method === 'instagram') targetBtn = document.getElementById('btnSpecialLink');
+
+            let originalBtnText = "";
+            if (targetBtn) {
+                originalBtnText = targetBtn.innerHTML;
+                targetBtn.innerHTML = "⏳ جاري تسجيل الطلب...";
+                targetBtn.style.pointerEvents = "none"; 
+                targetBtn.style.opacity = "0.7";
+            }
+
+            // 3. إرسال البيانات للشيت (في الخلفية بدون Await عشان الموبايل ميوقفش)
+            let totalOrderCost = cart.reduce((sum, item) => sum + ((item.costPrice || 0) * (item.billedQty || item.qty || 1)), 0);
+            let itemsTotalAmount = cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+            let orderNetProfit = (itemsTotalAmount - appliedDiscountValue) - totalOrderCost;
+
             if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL.includes('script.google.com')) {
-let payload = { 
-    name: n.value, 
-    phone: "'" + phoneVal, 
-    email: emailInput.value || "لم يكتب", 
-    gov: g.options[g.selectedIndex].text, 
-    address: a.value, 
-    orderDetails: orderDetailsForSheet + (appliedPromoCode ? ` | (كود خصم: ${appliedPromoCode})` : ""), 
-    total: finalTotalText, 
-    notes: document.getElementById('cNotes').value || "لا يوجد", 
-    method: method, 
-    promoCode: appliedPromoCode || "",
-    
-    // السطر الجديد اللي هنضيفه هنا:
-    eventId: orderEventId,
-    productIds: cart.map(item => item.productId || item.id || '').filter(id => id),
- // 🆕 أضيفي هذه الأسطر الثلاثة هنا
-    client_ip: '0.0.0.0',
-    client_user_agent: navigator.userAgent || '',
-  fbc: typeof getFbcFromUrl === 'function' ? getFbcFromUrl() : '',
-costPrice: cart.reduce((sum, item) => sum + ((item.costPrice || 0) * (item.billedQty || item.qty || 1)), 0),
-netProfit: cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0) - cart.reduce((sum, item) => sum + ((item.costPrice || 0) * (item.billedQty || item.qty || 1)), 0)
-};                try {
-                    await fetch(GOOGLE_SCRIPT_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload),
-                        mode: 'no-cors'
+                let payload = { 
+                    name: n.value, phone: "'" + phoneVal, email: emailInput.value || "لم يكتب", 
+                    gov: g.options[g.selectedIndex].text, address: a.value, 
+                    orderDetails: orderDetailsForSheet + (appliedPromoCode ? ` | (كود خصم: ${appliedPromoCode})` : ""), 
+                    total: finalTotalText, notes: document.getElementById('cNotes').value || "لا يوجد", 
+                    method: method, promoCode: appliedPromoCode || "", eventId: orderEventId,
+                    productIds: cart.map(item => item.productId || item.id || '').filter(id => id),
+                    client_ip: '0.0.0.0', client_user_agent: navigator.userAgent || '',
+                    fbc: typeof getFbcFromUrl === 'function' ? getFbcFromUrl() : '',
+                    costPrice: totalOrderCost, netProfit: orderNetProfit
+                };                
+                try {
+                    // شيلنا الـ await من هنا عشان الموقع ميقفش يستنى
+                    fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(payload), mode: 'no-cors'
                     });
-                } catch(e) {
-                    console.log("تم الإرسال", e);
-                }
+                } catch(e) { console.log("تم الإرسال", e); }
             }
 
             if (targetBtn) {
@@ -1245,40 +1232,24 @@ netProfit: cart.reduce((sum, item) => sum + (item.totalPrice || 0), 0) - cart.re
                     burnedCodes.push(appliedPromoCode);
                     localStorage.setItem('burnedPromoCodes', JSON.stringify(burnedCodes));
                 }
-                delete promoCodes[appliedPromoCode];
             }
+            cart = []; appliedPromoCode = ""; appliedDiscountValue = 0;
+            saveCart(); renderCartItems(); 
 
-            cart = [];
-            appliedPromoCode = "";
-            appliedDiscountValue = 0;
-            saveCart();
-            renderCartItems(); 
-
-            // محاولة النسخ مع تأمين الكود عشان ميوقفش المتصفح على الموبايل
-            try {
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(msg).catch(e => {
-                        const ta = document.createElement("textarea"); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                    });
-                } else {
-                    const ta = document.createElement("textarea"); ta.value = msg; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-                }
-            } catch (err) { 
-                console.log("تم تجاهل خطأ النسخ التلقائي لاستكمال التحويل"); 
-            }
-            
+            // 4. التحويل المباشر (بدون أي تأخير عشان الموبايل ميمنعوش)
             if (method === 'whatsapp') { 
-                showToast("✅ تم تسجيل الطلب!<br>جاري تحويلك للواتساب...");
-                setTimeout(() => { window.location.href = `https://wa.me/${formatPhone(contactData.wa.val)}?text=${encodeURIComponent(msg)}`; }, 1800); 
+                showToast("✅ تم تسجيل الطلب!<br>جاري تحويلك...");
+                window.location.href = `https://wa.me/${formatPhone(contactData.wa.val)}?text=${encodeURIComponent(msg)}`; 
             } 
             else if (method === 'messenger') { 
-                showToast("✅ تم نسخ الطلب!<br>جاري تحويلك للماسنجر...<br>قم بعمل (لصق) هناك.");                  setTimeout(() => { window.location.href = `https://m.me/${contactData.fb.val}`; }, 1800); 
+                showToast("✅ تم تسجيل الطلب!<br>جاري تحويلك...<br>برجاء لصق التفاصيل هناك");                 
+                window.location.href = `https://m.me/${contactData.fb.val}`; 
             } 
             else if (method === 'instagram') { 
-                showToast("✅تم نسخ الطلب!<br>جاري تحويلك للانستجرام...<br>قم بعمل (لصق) هناك.");                  setTimeout(() => { window.location.href = contactData.insta.val; }, 1800); 
+                showToast("✅ تم تسجيل الطلب!<br>جاري تحويلك...<br>برجاء لصق التفاصيل هناك");                 
+                window.location.href = contactData.insta.val; 
             }
         }
-
         function scrollThumbToCenter() {
             const activeThumb = document.querySelector('.thumb-img.active');
             if (activeThumb) {
